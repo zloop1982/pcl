@@ -165,6 +165,11 @@ namespace pcl
     */
   struct PointXYZINormal;
 
+  /** \brief Members: float x, y, z, label, normal[3], curvature
+    * \ingroup common
+    */
+  struct PointXYZLNormal;
+
   /** \brief Members: float x, y, z (union with float point[4]), range
     * \ingroup common
     */
@@ -214,6 +219,11 @@ namespace pcl
     * \ingroup common
     */
   struct ShapeContext1980;
+
+  /** \brief Members: float descriptor[1960], rf[9]
+    * \ingroup common
+    */
+  struct UniqueShapeContext1960;
 
   /** \brief Members: float pfh[125]
     * \ingroup common
@@ -322,6 +332,11 @@ namespace pcl
     * \ingroup common
     */
   struct PointSurfel;
+
+  /** \brief Members: float x, y, z, intensity, intensity_variance, height_variance
+    * \ingroup common
+    */
+  struct PointDEM;
 }
 
 /** @} */
@@ -475,6 +490,16 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (pcl::PointXYZINormal,
     (float, normal_z, normal_z)
     (float, curvature, curvature)
 )
+POINT_CLOUD_REGISTER_POINT_STRUCT (pcl::PointXYZLNormal,
+    (float, x, x)
+    (float, y, y)
+    (float, z, z)
+    (uint32_t, label, label)
+    (float, normal_x, normal_x)
+    (float, normal_y, normal_y)
+    (float, normal_z, normal_z)
+    (float, curvature, curvature)
+)
 POINT_CLOUD_REGISTER_POINT_STRUCT (pcl::PointWithRange,
     (float, x, x)
     (float, y, y)
@@ -565,6 +590,11 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (pcl::ShapeContext1980,
     (float[9], rf, rf)
 )
 
+POINT_CLOUD_REGISTER_POINT_STRUCT (pcl::UniqueShapeContext1960,
+    (float[1960], descriptor, shape_context)
+    (float[9], rf, rf)
+)
+
 POINT_CLOUD_REGISTER_POINT_STRUCT (pcl::SHOT352,
     (float[352], descriptor, shot)
     (float[9], rf, rf)
@@ -638,6 +668,16 @@ POINT_CLOUD_REGISTER_POINT_STRUCT (pcl::_ReferenceFrame,
 )
 POINT_CLOUD_REGISTER_POINT_WRAPPER(pcl::ReferenceFrame, pcl::_ReferenceFrame)
 
+POINT_CLOUD_REGISTER_POINT_STRUCT (pcl::_PointDEM,
+    (float, x, x)
+    (float, y, y)
+    (float, z, z)
+    (float, intensity, intensity)
+    (float, intensity_variance, intensity_variance)
+    (float, height_variance, height_variance)
+)
+POINT_CLOUD_REGISTER_POINT_WRAPPER(pcl::PointDEM, pcl::_PointDEM)
+
 namespace pcl 
 {
   // Allow float 'rgb' data to match to the newer uint32 'rgba' tag. This is so
@@ -649,7 +689,10 @@ namespace pcl
     {
       if (field.name == "rgb")
       {
-        return (field.datatype == pcl::PCLPointField::FLOAT32 &&
+        // For fixing the alpha value bug #1141, the rgb field can also match
+        // uint32.
+        return ((field.datatype == pcl::PCLPointField::FLOAT32 ||
+                 field.datatype == pcl::PCLPointField::UINT32) &&
                 field.count == 1);
       }
       else
@@ -672,8 +715,10 @@ namespace pcl
       }
       else
       {
+        // For fixing the alpha value bug #1141, rgb can also match uint32
         return (field.name == traits::name<PointT, fields::rgb>::value &&
-                field.datatype == traits::datatype<PointT, fields::rgb>::value &&
+                (field.datatype == traits::datatype<PointT, fields::rgb>::value ||
+                 field.datatype == pcl::PCLPointField::UINT32) &&
                 field.count == traits::datatype<PointT, fields::rgb>::size);
       }
     }

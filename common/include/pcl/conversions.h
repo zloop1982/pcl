@@ -52,7 +52,9 @@
 #include <pcl/for_each_type.h>
 #include <pcl/exceptions.h>
 #include <pcl/console/print.h>
+#ifndef Q_MOC_RUN
 #include <boost/foreach.hpp>
+#endif
 
 namespace pcl
 {
@@ -252,7 +254,10 @@ namespace pcl
     // Fill point cloud binary data (padding and all)
     size_t data_size = sizeof (PointT) * cloud.points.size ();
     msg.data.resize (data_size);
-    memcpy (&msg.data[0], &cloud.points[0], data_size);
+    if (data_size)
+    {
+      memcpy(&msg.data[0], &cloud.points[0], data_size);
+    }
 
     // Fill fields metadata
     msg.fields.clear ();

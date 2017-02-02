@@ -219,7 +219,7 @@ pcl::io::OpenNI2Grabber::start ()
   try
   {
     // check if we need to start/stop any stream
-    if (image_required_ && !device_->isColorStreamStarted () )
+    if (image_required_ && !device_->isColorStreamStarted () && device_->hasColorSensor ())
     {
       block_signals ();
       device_->startColorStream ();
@@ -401,8 +401,8 @@ pcl::io::OpenNI2Grabber::startSynchronization ()
 {
   try
   {
-    if (device_->isSynchronizationSupported () && !device_->isSynchronized () && !device_->isFile () &&
-      device_->getColorVideoMode ().frame_rate_ == device_->getDepthVideoMode ().frame_rate_)
+    if (device_->hasColorSensor () && (device_->isSynchronizationSupported () && !device_->isSynchronized () && !device_->isFile () &&
+        device_->getColorVideoMode ().frame_rate_ == device_->getDepthVideoMode ().frame_rate_))
       device_->setSynchronization (true);
   }
   catch (const IOException& exception)
@@ -517,6 +517,8 @@ pcl::io::OpenNI2Grabber::convertToXYZPointCloud (const DepthImage::Ptr& depth_im
 {
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud <pcl::PointXYZ>);
 
+  cloud->header.seq = depth_image->getFrameID ();
+  cloud->header.stamp = depth_image->getTimestamp ();
   cloud->height = depth_height_;
   cloud->width = depth_width_;
   cloud->is_dense = false;
@@ -593,6 +595,8 @@ pcl::io::OpenNI2Grabber::convertToXYZRGBPointCloud (const Image::Ptr &image, con
 {
   boost::shared_ptr<pcl::PointCloud<PointT> > cloud (new pcl::PointCloud<PointT>);
 
+  cloud->header.seq = depth_image->getFrameID ();
+  cloud->header.stamp = depth_image->getTimestamp ();
   cloud->header.frame_id = rgb_frame_id_;
   cloud->height = std::max (image_height_, depth_height_);
   cloud->width = std::max (image_width_, depth_width_);
@@ -608,10 +612,10 @@ pcl::io::OpenNI2Grabber::convertToXYZRGBPointCloud (const Image::Ptr &image, con
 
   // Load pre-calibrated camera parameters if they exist
   if (pcl_isfinite (depth_parameters_.focal_length_x))
-    fx =  1.0f / static_cast<float> (depth_parameters_.focal_length_x);
+    fx =  static_cast<float> (depth_parameters_.focal_length_x);
 
   if (pcl_isfinite (depth_parameters_.focal_length_y))
-    fy =  1.0f / static_cast<float> (depth_parameters_.focal_length_y);
+    fy =  static_cast<float> (depth_parameters_.focal_length_y);
 
   if (pcl_isfinite (depth_parameters_.principal_point_x))
     cx =  static_cast<float> (depth_parameters_.principal_point_x);
@@ -656,7 +660,7 @@ pcl::io::OpenNI2Grabber::convertToXYZRGBPointCloud (const Image::Ptr &image, con
 
   // fill in XYZ values
   unsigned step = cloud->width / depth_width_;
-  unsigned skip = cloud->width * step - cloud->width;
+  unsigned skip = cloud->width - (depth_width_ * step);
 
   int value_idx = 0;
   int point_idx = 0;
@@ -686,12 +690,12 @@ pcl::io::OpenNI2Grabber::convertToXYZRGBPointCloud (const Image::Ptr &image, con
 
   // fill in the RGB values
   step = cloud->width / image_width_;
-  skip = cloud->width * step - cloud->width;
+  skip = cloud->width - (image_width_ * step);
 
   value_idx = 0;
   point_idx = 0;
   RGBValue color;
-  color.Alpha = 0;
+  color.Alpha = 0xff;
 
   for (unsigned yIdx = 0; yIdx < image_height_; ++yIdx, point_idx += skip)
   {
@@ -718,6 +722,8 @@ pcl::io::OpenNI2Grabber::convertToXYZIPointCloud (const IRImage::Ptr &ir_image, 
 {
   boost::shared_ptr<pcl::PointCloud<pcl::PointXYZI> > cloud (new pcl::PointCloud<pcl::PointXYZI > ());
 
+  cloud->header.seq = depth_image->getFrameID ();
+  cloud->header.stamp = depth_image->getTimestamp ();
   cloud->header.frame_id = rgb_frame_id_;
   cloud->height = depth_height_;
   cloud->width = depth_width_;

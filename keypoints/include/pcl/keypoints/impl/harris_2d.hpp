@@ -105,7 +105,6 @@ pcl::HarrisKeypoint2D<PointInT, PointOutT, IntensityT>::computeSecondMomentMatri
   
   int x = static_cast<int> (index % input_->width);
   int y = static_cast<int> (index / input_->width);
-  unsigned count = 0;
   // indices        0   1   2
   // coefficients: ixix  ixiy  iyiy
   memset (coefficients, 0, sizeof (float) * 3);
@@ -254,7 +253,7 @@ pcl::HarrisKeypoint2D<PointInT, PointOutT, IntensityT>::detectKeypoints (PointCl
     const int occupency_map_size (occupency_map.size ());
 
 #ifdef _OPENMP
-#pragma omp parallel for shared (output, occupency_map) private (width, height) num_threads(threads_)   
+#pragma omp parallel for shared (output, occupency_map) firstprivate (width, height) num_threads(threads_)
 #endif
     for (int i = 0; i < occupency_map_size; ++i)
     {
